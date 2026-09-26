@@ -712,26 +712,76 @@ export default function Page() {
                 ))}
               </section>
               <section className="section-block">
-                <div className="matcher-card">
-                  <div className="section-kicker"><span className="sparkle"><Plus size={15} /></span><span>{editingId ? `Editing profile #${editingId}` : 'New capability profile'}</span></div>
-                  <form onSubmit={saveProfile} style={{ display: 'grid', gap: 10, marginTop: 18 }}>
-                    <input placeholder="Name / organization" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <select value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })}>{Object.entries(COUNTRY_NAMES).map(([c, n]) => <option key={c} value={c}>{n}</option>)}</select>
-                      <input placeholder="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} style={{ flex: 1 }} />
-                      <select value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })}>{INDUSTRIES.map((i) => <option key={i}>{i}</option>)}</select>
+                <div className="profile-form-card">
+                  <div className="profile-form-header">
+                    <div className="profile-form-icon"><Plus size={18} /></div>
+                    <div>
+                      <p className="eyebrow">{editingId ? `Editing profile #${editingId}` : 'New profile'}</p>
+                      <h2 className="profile-form-title">{editingId ? 'Update your capability' : 'New capability profile'}</h2>
                     </div>
-                    <input placeholder="Products / services" value={form.products_services} onChange={(e) => setForm({ ...form, products_services: e.target.value })} />
-                    <textarea placeholder="What can you offer?" value={form.offers} onChange={(e) => setForm({ ...form, offers: e.target.value })} required />
-                    <textarea placeholder="What do you need?" value={form.needs} onChange={(e) => setForm({ ...form, needs: e.target.value })} />
-                    <input placeholder="Partnership type (e.g. Distribution)" value={form.partnership_type} onChange={(e) => setForm({ ...form, partnership_type: e.target.value })} />
-                    <input placeholder="Logo / photo URL (optional)" value={form.avatar_url} onChange={(e) => setForm({ ...form, avatar_url: e.target.value })} />
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <input placeholder="Registry (e.g. CAC Nigeria)" value={(form as any).registry_name ?? ''} onChange={(e) => setForm({ ...form, registry_name: e.target.value } as any)} style={{ flex: 1 }} />
-                      <input placeholder="Reg. number" value={(form as any).registration_number ?? ''} onChange={(e) => setForm({ ...form, registration_number: e.target.value } as any)} style={{ flex: 1 }} />
+                  </div>
+                  <form onSubmit={saveProfile} className="profile-form-grid">
+                    <div className="form-field full">
+                      <label className="form-label">Name / Organization</label>
+                      <input className="form-input" placeholder="e.g. Agro Exports Ltd." value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
                     </div>
-                    <div><p className="eyebrow" style={{ margin: '4px 0 8px' }}>Target countries</p><div className="tag-row" style={{ flexWrap: 'wrap', gap: 8 }}>{Object.entries(COUNTRY_NAMES).filter(([c]) => c !== 'OTHER').map(([c, n]) => <label key={c} className="tag" style={{ cursor: 'pointer', background: form.target_countries.includes(c) ? '#eaf3ed' : undefined, color: form.target_countries.includes(c) ? '#195c4b' : undefined, fontWeight: form.target_countries.includes(c) ? 700 : undefined }}><input type="checkbox" checked={form.target_countries.includes(c)} onChange={() => setForm({ ...form, target_countries: form.target_countries.includes(c) ? form.target_countries.filter((x) => x !== c) : [...form.target_countries, c] })} style={{ width: 'auto', marginRight: 4 }} />{n}</label>)}</div></div>
-                    <div style={{ display: 'flex', gap: 10 }}><button className="connect-btn" type="submit" disabled={savingProfile}>{savingProfile ? 'Saving…' : editingId ? 'Save changes' : 'Publish profile'}</button>{editingId && <button className="ghost-btn" type="button" onClick={() => { setEditingId(null); setForm(EMPTY_FORM) }}>Cancel</button>}</div>
+                    <div className="form-row">
+                      <div className="form-field">
+                        <label className="form-label">Country</label>
+                        <select className="form-input" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })}>{Object.entries(COUNTRY_NAMES).map(([c, n]) => <option key={c} value={c}>{n}</option>)}</select>
+                      </div>
+                      <div className="form-field">
+                        <label className="form-label">City</label>
+                        <input className="form-input" placeholder="e.g. Lagos" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+                      </div>
+                      <div className="form-field">
+                        <label className="form-label">Industry</label>
+                        <select className="form-input" value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })}>{INDUSTRIES.map((i) => <option key={i}>{i}</option>)}</select>
+                      </div>
+                    </div>
+                    <div className="form-field full">
+                      <label className="form-label">Products / Services</label>
+                      <input className="form-input" placeholder="What do you produce or provide?" value={form.products_services} onChange={(e) => setForm({ ...form, products_services: e.target.value })} />
+                    </div>
+                    <div className="form-field full">
+                      <label className="form-label">What can you offer?</label>
+                      <textarea className="form-input form-textarea" placeholder="Describe your capability, capacity, or assets…" value={form.offers} onChange={(e) => setForm({ ...form, offers: e.target.value })} required />
+                    </div>
+                    <div className="form-field full">
+                      <label className="form-label">What do you need?</label>
+                      <textarea className="form-input form-textarea" placeholder="Describe what you're looking for from a partner…" value={form.needs} onChange={(e) => setForm({ ...form, needs: e.target.value })} />
+                    </div>
+                    <div className="form-field full">
+                      <label className="form-label">Partnership type</label>
+                      <input className="form-input" placeholder="e.g. Distribution, Joint Venture, Supplier…" value={form.partnership_type} onChange={(e) => setForm({ ...form, partnership_type: e.target.value })} />
+                    </div>
+                    <div className="form-field full">
+                      <label className="form-label">Logo / Photo URL <span className="form-optional">(optional)</span></label>
+                      <input className="form-input" placeholder="https://…" value={form.avatar_url} onChange={(e) => setForm({ ...form, avatar_url: e.target.value })} />
+                    </div>
+                    <div className="form-row">
+                      <div className="form-field">
+                        <label className="form-label">Registry <span className="form-optional">(e.g. CAC Nigeria)</span></label>
+                        <input className="form-input" placeholder="Registry name" value={(form as any).registry_name ?? ''} onChange={(e) => setForm({ ...form, registry_name: e.target.value } as any)} />
+                      </div>
+                      <div className="form-field">
+                        <label className="form-label">Reg. Number</label>
+                        <input className="form-input" placeholder="e.g. RC1234567" value={(form as any).registration_number ?? ''} onChange={(e) => setForm({ ...form, registration_number: e.target.value } as any)} />
+                      </div>
+                    </div>
+                    <div className="form-field full">
+                      <label className="form-label">Target countries</label>
+                      <div className="country-tag-grid">{Object.entries(COUNTRY_NAMES).filter(([c]) => c !== 'OTHER').map(([c, n]) => (
+                        <label key={c} className={`country-tag${form.target_countries.includes(c) ? ' selected' : ''}`}>
+                          <input type="checkbox" checked={form.target_countries.includes(c)} onChange={() => setForm({ ...form, target_countries: form.target_countries.includes(c) ? form.target_countries.filter((x) => x !== c) : [...form.target_countries, c] })} />
+                          {n}
+                        </label>
+                      ))}</div>
+                    </div>
+                    <div className="form-actions">
+                      <button className="connect-btn" type="submit" disabled={savingProfile}>{savingProfile ? 'Saving…' : editingId ? 'Save changes' : 'Publish profile'}</button>
+                      {editingId && <button className="ghost-btn" type="button" onClick={() => { setEditingId(null); setForm(EMPTY_FORM) }}>Cancel</button>}
+                    </div>
                   </form>
                 </div>
               </section>
