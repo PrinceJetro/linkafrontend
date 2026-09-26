@@ -164,6 +164,8 @@ export default function Page() {
   const [threadMsgs, setThreadMsgs] = useState<any[]>([])
   const [msgBody, setMsgBody] = useState('')
   const [sendingMsg, setSendingMsg] = useState(false)
+  const [onboarding, setOnboarding] = useState(false)
+  const [acceptedModal, setAcceptedModal] = useState<{ fromName: string; toName: string } | null>(null)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -173,6 +175,13 @@ export default function Page() {
     if (!isLoggedIn()) { router.replace('/login'); return }
     if (window.location.hash === '#capability') setActiveNav('My capability profile')
     if (window.location.hash === '#messages') setActiveNav('Messages')
+    // Onboarding: new user redirected from registration
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('onboarding') === '1') {
+      setActiveNav('My capability profile')
+      setOnboarding(true)
+      window.history.replaceState({}, '', '/')
+    }
     setAuthChecked(true)
     api.me().then(setUser).catch(() => { clearTokens(); router.replace('/login') })
     api.profiles().then((data: any) => {
@@ -284,12 +293,20 @@ export default function Page() {
     }
   }
 
-  async function actOnRequest(id: number, action: 'accept' | 'decline' | 'request_info') {
+  async function actOnRequest(id: number, action: 'accept' | 'decline' | 'request_info', r?: any) {
     try {
       await api.requestAction(id, action)
       const data: any = await api.myRequests()
-      setRequests(Array.isArray(data) ? data : data.results ?? [])
+      const updated = Array.isArray(data) ? data : data.results ?? []
+      setRequests(updated)
       api.notifications().then(setNotifs).catch(() => {})
+      if (action === 'accept' && r) {
+        setAcceptedModal({ fromName: r.from_profile_name ?? `#${r.from_profile}`, toName: r.to_profile_name ?? `#${r.to_profile}` })
+      } else if (action === 'decline') {
+        setToast({ title: 'Request declined', body: 'The other party has been notified.' })
+      } else if (action === 'request_info') {
+        setToast({ title: 'Info requested', body: 'They\'ll be prompted to share more details.' })
+      }
     } catch {
       setToast({ title: 'Update failed', body: 'Could not update that request.' })
     }
@@ -674,17 +691,44 @@ export default function Page() {
               <div className="page-heading"><div><p className="eyebrow">Inbox</p><h1>My requests</h1><p className="subheading">Sent and received partnership requests.</p></div></div>
               <section className="section-block">
                 {!requests.length && <div className="match-card"><p className="match-detail">No requests yet. Find a partner and hit Connect.</p><div className="match-actions"><button className="connect-btn" onClick={() => setActiveNav('Find partners')}>Find partners <ChevronRight size={15} /></button></div></div>}
-                {requests.map((r: any) => (
-                  <div key={r.id} className="match-card" style={{ marginBottom: 10 }}>
-                    <div className="match-topline"><div><div className="match-name-row"><h3>{r.from_profile_name ?? `#${r.from_profile}`} → {r.to_profile_name ?? `#${r.to_profile}`}</h3><span className="verified">{r.status}</span></div><p>{r.partnership_type}</p></div></div>
-                    <p className="match-detail">{r.message}</p>
-                    <div className="match-actions">
-                      <button className="ghost-btn" onClick={() => actOnRequest(r.id, 'decline')}>Decline</button>
-                      <button className="ghost-btn" onClick={() => actOnRequest(r.id, 'request_info')}>Ask for info</button>
-                      <button className="connect-btn" onClick={() => actOnRequest(r.id, 'accept')}>Accept <ChevronRight size={15} /></button>
+                {requests.map((r: any) => {
+                  const isSender = myProfiles.some((p: any) => p.id === r.from_profile)
+                  const isPending = r.status === 'pending'
+                  const isReceiver = !isSender
+                  return (
+                    <div key={r.id} className={`match-card request-card ${r.status}`} style={{ marginBottom: 10 }}>
+                      <div className="match-topline">
+                        <div className={`profile-mark ${isSender ? 'orange' : 'blue'}`}>{isSender ? '↑' : '↓'}</div>
+                        <div style={{ flex: 1 }}>
+                          <div className="match-name-row">
+                            <h3>{r.from_profile_name ?? `#${r.from_profile}`} → {r.to_profile_name ?? `#${r.to_profile}`}</h3>
+                            <span className={`request-status-badge ${r.status}`}>{r.status === 'pending' ? (isSender ? 'Awaiting response' : 'Action needed') : r.status}</span>
+                          </div>
+                          <p style={{ fontSize: 11, color: '#95a19c', margin: '3px 0 0' }}>{r.partnership_type} · {isSender ? 'Sent by you' : 'Received'}</p>
+                        </div>
+                      </div>
+                      <p className="match-detail">{r.message}</p>
+                      {isReceiver && isPending && (
+                        <div className="match-actions">
+                          <button className="ghost-btn" onClick={() => actOnRequest(r.id, 'decline', r)}>Decline</button>
+                          <button className="ghost-btn" onClick={() => actOnRequest(r.id, 'request_info', r)}>Ask for info</button>
+                          <button className="connect-btn" onClick={() => actOnRequest(r.id, 'accept', r)}>Accept <ChevronRight size={15} /></button>
+                        </div>
+                      )}
+                      {isSender && isPending && (
+                        <div className="match-actions"><span className="tag" style={{ background: '#fff8ed', color: '#c07a30' }}>⏳ Waiting for their response</span></div>
+                      )}
+                      {r.status === 'accepted' && (
+                        <div className="match-actions"><span className="tag" style={{ background: '#eaf4ed', color: '#2d7a55', fontWeight: 700 }}>✓ Partnership active</span>
+                          <button className="ghost-btn" onClick={() => setActiveNav('Partnerships')}>View in Partnerships →</button>
+                        </div>
+                      )}
+                      {r.status === 'declined' && (
+                        <div className="match-actions"><span className="tag" style={{ background: '#fdf0ec', color: '#b3543a' }}>✕ Declined</span></div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </section>
             </>
           )}
@@ -692,6 +736,16 @@ export default function Page() {
           {activeNav === 'My capability profile' && (
             <>
               <div className="page-heading"><div><p className="eyebrow">Your presence</p><h1>My capability profile</h1><p className="subheading">What you offer Africa — and what you need from it.</p></div></div>
+              {onboarding && (
+                <div className="onboarding-banner">
+                  <div className="onboarding-banner-icon">👋</div>
+                  <div className="onboarding-banner-body">
+                    <strong>Welcome{user?.first_name ? `, ${user.first_name}` : ''}! One last step.</strong>
+                    <p>Tell the network who you are and what you're looking for. Fill in the form below to publish your capability profile — this is what the AI uses to match you with the right partners across Africa.</p>
+                  </div>
+                  <button className="ghost-btn" onClick={() => setOnboarding(false)} style={{ marginLeft: 'auto', alignSelf: 'flex-start' }}>✕</button>
+                </div>
+              )}
               <section className="section-block">
                 <div className="section-header"><div><p className="eyebrow">Live on the network</p><h2 className="section-title">Your profiles ({myProfiles.length})</h2></div></div>
                 {!myProfiles.length && <div className="match-card"><p className="match-detail">No profile yet — create your first one below to start sending partnership requests.</p></div>}
@@ -870,6 +924,27 @@ export default function Page() {
 
       {toast && <div className="toast"><span><Handshake size={16} /></span><div><strong>{toast.title}</strong><p>{toast.body}</p></div><button onClick={() => setToast(null)}><X size={15} /></button></div>}
       <div style={{ display: 'none' }}><Compass size={10} /><Users size={10} /></div>
+
+      {acceptedModal && (
+        <div className="modal-overlay" onClick={() => setAcceptedModal(null)}>
+          <div className="accepted-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="accepted-modal-icon">🤝</div>
+            <h2 className="accepted-modal-title">Partnership accepted!</h2>
+            <p className="accepted-modal-sub">You have confirmed a new connection on Linka.</p>
+            <div className="accepted-modal-pair">
+              <span>{acceptedModal.fromName}</span>
+              <span className="accepted-modal-arrow">↔</span>
+              <span>{acceptedModal.toName}</span>
+            </div>
+            <div className="accepted-modal-steps">
+              <p className="eyebrow" style={{ marginBottom: 10 }}>What&apos;s next</p>
+              <button className="accepted-modal-action" onClick={() => { setAcceptedModal(null); setActiveNav('Messages') }}>💬 Send a message</button>
+              <button className="accepted-modal-action" onClick={() => { setAcceptedModal(null); setActiveNav('Partnerships') }}>📜 Draft an MOU</button>
+            </div>
+            <button className="ghost-btn" style={{ marginTop: 16, alignSelf: 'center' }} onClick={() => setAcceptedModal(null)}>Close</button>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
